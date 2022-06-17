@@ -15,7 +15,7 @@ Optionally install JAX with CPU support (training will be very slow):
 pip install jax==0.3.13 jaxlib==0.3.13
 ```
 
-Clone the repository and install KeyCLD:
+Clone this repository and install KeyCLD:
 ```
 pip install .
 ```
