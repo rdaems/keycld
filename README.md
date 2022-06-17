@@ -4,8 +4,8 @@
 
 ### MuJoCo
 
-Download [MuJoCo 2.1.1](https://github.com/deepmind/mujoco/releases/download/2.1.1/mujoco-2.1.1-linux-x86_64.tar.gz).
-Unpack archive and place at `~/.mujoco/mujoco-2.1.1/`.
+Download [MuJoCo 2.2.0](https://github.com/deepmind/mujoco/releases/tag/2.2.0).
+Unpack archive and place at `~/.mujoco/mujoco-2.2.0/`.
 
 ### KeyCLD
 
