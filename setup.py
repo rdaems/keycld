@@ -4,6 +4,7 @@ setup(
     name='keycld',
     packages=find_packages(),
     install_requires=[
+        'jax[cuda12]',
         'wandb',
         'jupyter',
         'matplotlib',

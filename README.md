@@ -10,19 +10,11 @@ KeyCLD learns Lagrangian dynamics from images. **(a)** An observation of a dynam
 
 ### KeyCLD
 
-Install `jax>=0.4.31` with CUDA support [https://github.com/google/jax#installation](https://github.com/google/jax#installation):
-```
-pip install "jax[cuda12]>=0.4.31"
-```
-Optionally install JAX with CPU support (training will be very slow):
-```
-pip install jax>=0.4.31
-```
-
 Clone this repository and install KeyCLD:
 ```
 pip install .
 ```
+
 A forked version of `dm_control` will be installed, with some changes to the environments to make it suitable for this work (see the paper Appendix for details).
 This will also install mujoco.
 If you have problems with (headless) rendering, see [https://github.com/google-deepmind/dm_control#rendering](https://github.com/google-deepmind/dm_control#rendering).
