@@ -13,8 +13,11 @@ def bce_loss(y_pred, y_true):
     return bce
 
 
-def loss_fn_step(dynamics_weight, num_predicted_steps, model, params, item, augmentation_permutation, bce_weight=1.):
-    solver = partial(odeint, mxstep=2000)
+def loss_fn_step(dynamics_weight, bce_weight, num_predicted_steps, solver, model, params, item, augmentation_permutation):
+    if solver == 'euler':
+        solver = util.explicit_euler
+    elif solver == 'dopri':
+        solver = partial(odeint, mxstep=2000)
 
     t = item['t']
     dt = t[1] - t[0]

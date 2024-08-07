@@ -20,4 +20,4 @@ if __name__ == '__main__':
     data = Data(environment=args.environment, init_mode=args.init_mode, control=args.control)
     data.constraint_fn = None   # overwrite constraint_fn
 
-    args.experiment.train(data, partial(validate, data))
+    args.experiment.train(data, validate)

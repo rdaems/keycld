@@ -36,9 +36,19 @@ def validate(data, model, params, epoch):
     potential_energies, constraint_values = jax.vmap(jax.vmap(calculate_grid_statistics))(images)
     constraint_mean = jnp.mean(constraint_values, axis=(0, 1))
     constraint_std = jnp.std(constraint_values, axis=(0, 1))
+
+    # if data.environment == 'pendulum':
+    #     table = wandb.Table(data=[[x, y] for (x, y) in zip(positions[0], potential_energies[0])], columns=['q', 'Potential energy'])
+    #     potential_energy_log = wandb.plot.line(table, 'q', 'Potential energy', title='Potential energy')
+    # elif data.environment in ['cartpole', 'acrobot']:
+    #     x_labels = range(potential_energies.shape[1])
+    #     y_labels = range(potential_energies.shape[0])
+    #     potential_energy_log = wandb.plots.HeatMap(x_labels, y_labels, potential_energies)
+
     mass_matrix = model.mass_matrix(params, jnp.zeros(2 * data.n))
 
     # predict some validations set runs
+    # solver = partial(odeint, mxstep=20000)
     solver = odeint
     predictions = [predict_run(model, params, run, solver) for run in tqdm(data.val)]
     vpt_mean, vpt_std, vpt_median = util.calculate_vpt(data.epsilon, data.val, predictions)
@@ -62,6 +72,8 @@ def validate(data, model, params, epoch):
         'vpt': vpt_mean,
         'vpt_std': vpt_std,
         'vpt_median': vpt_median,
+        # 'potential_energy': potential_energy_log,
+        # 'mass_matrix': wandb.plot.HeatMap(range(2 * data.n), range(2 * data.n), mass_matrix),
         'visuals':  wandb.Video(visuals.transpose(0, 3, 1, 2), fps=30, format='gif'),
     }, step=epoch)
 
@@ -70,7 +82,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--environment', type=str, help='Which DM control suite environment [pendulum, cartpole, acrobot].')
     parser.add_argument('--init_mode', type=str, help='State initialization mode [rest, random].')
-    parser.add_argument('--control', type=str, help='Control mode [yes, underactuated, no].')
+    parser.add_argument('--control', type=str, help='Control mode [yes, no].')
     parser.add_arguments(ExperimentKeyCLD, dest='experiment')
     args = parser.parse_args()
 

@@ -17,6 +17,6 @@ setup(
         'pandas',
         'seaborn',
         'plotly',
-        'dm_control @ git+https://github.com/rdaems/dm_control.git@b6b8717cd7b6c92304ee8da5b122ba4cb643d45c'
+        'dm_control @ git+https://github.com/rdaems/dm_control.git@e2153e8763f8765f7f5b0c1e342987a531bead0a'
     ]
 )

@@ -35,49 +35,38 @@ The cache location can be changed at the top of `keycld/data/dm.py`.
 
 ### KeyCLD
 ```
-python keycld/dm.py --environment=pendulum --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python keycld/dm.py --environment=pendulum --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python keycld/dm.py --environment=cartpole --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python keycld/dm.py --environment=cartpole --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python keycld/dm.py --environment=cartpole --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python keycld/dm.py --environment=acrobot --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python keycld/dm.py --environment=acrobot --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python keycld/dm.py --environment=acrobot --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=pendulum --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=pendulum --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=cartpole --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=cartpole --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=cartpole --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=acrobot --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=acrobot --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=acrobot --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
 ```
 
 ### KeyCLD-NC
 ```
-python ablations/no_constraint.py --environment=pendulum --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/no_constraint.py --environment=pendulum --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/no_constraint.py --environment=cartpole --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/no_constraint.py --environment=cartpole --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/no_constraint.py --environment=cartpole --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/no_constraint.py --environment=acrobot --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/no_constraint.py --environment=acrobot --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/no_constraint.py --environment=acrobot --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=pendulum --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=pendulum --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=cartpole --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=cartpole --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=cartpole --init_mode=random --control=yes ---batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=acrobot --init_mode=random --control=no ---batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=acrobot --init_mode=random --control=underactuated ---batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=acrobot --init_mode=random --control=yes ---batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
 ```
 
 ### NODE2
 ```
-python ablations/node2.py --environment=pendulum --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/node2.py --environment=pendulum --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/node2.py --environment=cartpole --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/node2.py --environment=cartpole --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/node2.py --environment=cartpole --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/node2.py --environment=acrobot --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/node2.py --environment=acrobot --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-python ablations/node2.py --environment=acrobot --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
-```
-
-### Lag-caVAE & Lag-VAE & HGN
-```
-python ablations/lagcavae.py --control no && \
-python ablations/lagcavae.py --control yes && \
-python ablations/lagcavae.py --control no --ca && \
-python ablations/lagcavae.py --control yes --ca && \
-python ablations/hgn.py --environment pendulum && \
-python ablations/hgn.py --environment cartpole && \
-python ablations/hgn.py --environment acrobot && \
+python ablations/node2.py --environment=pendulum --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=pendulum --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=cartpole --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=cartpole --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=cartpole --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=acrobot --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=acrobot --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=acrobot --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --bce_weight=1 --solver=euler --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
 ```
 
 ## Cite this research

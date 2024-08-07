@@ -37,6 +37,8 @@ def generate_run(random_seed, environment, init_mode, control, num_frames=NUM_FR
     assert environment in ['pendulum', 'cartpole', 'acrobot']
     assert init_mode in ['rest', 'random']
     assert control in ['yes', 'underactuated', 'no']
+    if environment == 'pendulum':
+        assert control != 'underactuated'
     random_state = np.random.RandomState(random_seed)
 
     env = suite.load(environment, 'swingup', task_kwargs={'random': random_state})
@@ -44,6 +46,8 @@ def generate_run(random_seed, environment, init_mode, control, num_frames=NUM_FR
     action = random_state.uniform(-2., 2., spec.shape)
     if control == 'no' or random_state.rand() < .2:
         action = action * 0
+    elif control == 'underactuated':
+        action[1] = 0
     time_step = env.reset()
 
     if init_mode == 'random':
@@ -62,7 +66,7 @@ def generate_run(random_seed, environment, init_mode, control, num_frames=NUM_FR
 
     position_key = POSITION_KEYS[environment]
     frames, ticks, positions, velocities = [], [], [], []
-    for step in range(NUM_FRAMES):
+    for step in range(num_frames):
         time_step = env.step(action)
         frames.append(env.physics.render(camera_id=0, height=IMAGE_SIZE, width=IMAGE_SIZE))
         ticks.append(env.physics.data.time)
