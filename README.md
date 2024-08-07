@@ -8,27 +8,28 @@ KeyCLD learns Lagrangian dynamics from images. **(a)** An observation of a dynam
 
 ## Installation
 
-### MuJoCo
-
-Download [MuJoCo 2.2.0](https://github.com/deepmind/mujoco/releases/tag/2.2.0).
-Unpack archive and place at `~/.mujoco/mujoco-2.2.0/`.
-
 ### KeyCLD
 
-Install `jax==0.3.13` and `jaxlib==0.3.13` with cuda support: https://github.com/google/jax#pip-installation-gpu-cuda.
+Install `jax>=0.4.31` with CUDA support [https://github.com/google/jax#installation](https://github.com/google/jax#installation):
+```
+pip install "jax[cuda12]>=0.4.31"
+```
 Optionally install JAX with CPU support (training will be very slow):
 ```
-pip install jax==0.3.13 jaxlib==0.3.13
+pip install jax>=0.4.31
 ```
 
 Clone this repository and install KeyCLD:
 ```
 pip install .
 ```
+A forked version of `dm_control` will be installed, with some changes to the environments to make it suitable for this work (see the paper Appendix for details).
+This will also install mujoco.
+If you have problems with (headless) rendering, see [https://github.com/google-deepmind/dm_control#rendering](https://github.com/google-deepmind/dm_control#rendering).
 
 ### Weights and Biases
 
-KeyCLD uses wandb.ai for logging training and results.
+KeyCLD uses [wandb](https://wandb.ai) for logging training and results.
 If you are not familiar with wandb, follow the instructions when first running the code.
 
 ## Reproduce Experiments
@@ -37,40 +38,54 @@ Run the commands below to reproduce all experiments reported in the paper.
 Check the results in wandb.
 Or take a look in `notebooks/model.ipynb` to interact with the trained models (requires the model to finish training).
 
+The data sets are generated automatically and cached at `/tmp/dm`.
+The cache location can be changed at the top of `keycld/data/dm.py`.
+
 ### KeyCLD
 ```
-python keycld/dm.py --environment pendulum --init_mode rest --control yes --batch_size=1 --dynamics_weight=0.0005 --learning_rate=0.0003 --num_epochs=100 --num_hidden_dim=32
-
-python keycld/dm.py --environment cartpole --init_mode rest --control yes --batch_size=1 --dynamics_weight=0.0005 --learning_rate=0.0003 --num_epochs=100 --num_hidden_dim=32
-
-python keycld/dm.py --environment acrobot --init_mode rest --control yes --batch_size=1 --dynamics_weight=0.0005 --learning_rate=0.0003 --num_epochs=100 --num_hidden_dim=32
+python keycld/dm.py --environment=pendulum --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=pendulum --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=cartpole --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=cartpole --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=cartpole --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=acrobot --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=acrobot --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python keycld/dm.py --environment=acrobot --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
 ```
 
 ### KeyCLD-NC
 ```
-python ablations/no_constraint.py --environment pendulum --init_mode rest --control yes --batch_size=1 --dynamics_weight=0.0005 --learning_rate=0.0003 --num_epochs=100 --num_hidden_dim=32
-
-python ablations/no_constraint.py --environment cartpole --init_mode rest --control yes --batch_size=1 --dynamics_weight=0.0005 --learning_rate=0.0003 --num_epochs=100 --num_hidden_dim=32
-
-python ablations/no_constraint.py --environment acrobot --init_mode rest --control yes --batch_size=1 --dynamics_weight=0.0005 --learning_rate=0.0003 --num_epochs=100 --num_hidden_dim=32
+python ablations/no_constraint.py --environment=pendulum --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=pendulum --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=cartpole --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=cartpole --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=cartpole --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=acrobot --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=acrobot --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/no_constraint.py --environment=acrobot --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
 ```
 
 ### NODE2
 ```
-python ablations/node2.py --environment pendulum --init_mode rest --control yes --batch_size=1 --dynamics_weight=0.0005 --learning_rate=0.0003 --num_epochs=100 --num_hidden_dim=32
-
-python ablations/node2.py --environment cartpole --init_mode rest --control yes --batch_size=1 --dynamics_weight=0.0005 --learning_rate=0.0003 --num_epochs=100 --num_hidden_dim=32
-
-python ablations/node2.py --environment acrobot --init_mode rest --control yes --batch_size=1 --dynamics_weight=0.0005 --learning_rate=0.0003 --num_epochs=100 --num_hidden_dim=32
+python ablations/node2.py --environment=pendulum --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=pendulum --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=cartpole --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=cartpole --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=cartpole --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=acrobot --init_mode=random --control=no --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=acrobot --init_mode=random --control=underactuated --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
+python ablations/node2.py --environment=acrobot --init_mode=random --control=yes --batch_size=1 --dynamics_weight=1 --learning_rate=0.0003 --num_epochs=40 --num_hidden_dim=32 --num_predicted_steps=4 && \
 ```
 
-### FC
+### Lag-caVAE & Lag-VAE & HGN
 ```
-python ablations/fc.py --environment pendulum --init_mode rest --control yes --batch_size=1 --dynamics_weight=0.0005 --learning_rate=0.0003 --num_epochs=100 --num_hidden_dim=32
-
-python ablations/fc.py --environment cartpole --init_mode rest --control yes --batch_size=1 --dynamics_weight=0.0005 --learning_rate=0.0003 --num_epochs=100 --num_hidden_dim=32
-
-python ablations/fc.py --environment acrobot --init_mode rest --control yes --batch_size=1 --dynamics_weight=0.0005 --learning_rate=0.0003 --num_epochs=100 --num_hidden_dim=32
+python ablations/lagcavae.py --control no && \
+python ablations/lagcavae.py --control yes && \
+python ablations/lagcavae.py --control no --ca && \
+python ablations/lagcavae.py --control yes --ca && \
+python ablations/hgn.py --environment pendulum && \
+python ablations/hgn.py --environment cartpole && \
+python ablations/hgn.py --environment acrobot && \
 ```
 
 ## Cite this research
@@ -78,10 +93,13 @@ python ablations/fc.py --environment acrobot --init_mode rest --control yes --ba
 To cite KeyCLD you can use the following bibtex:
 
 ```
-@article{daems2022keycld,
-  title={KeyCLD: Learning Constrained Lagrangian Dynamics in Keypoint Coordinates from Images},
+@article{daems2024keycld,
+  title={KeyCLD: Learning constrained Lagrangian dynamics in keypoint coordinates from images},
   author={Daems, Rembert and Taets, Jeroen and wyffels, Francis and Crevecoeur, Guillaume},
-  journal={arXiv preprint arXiv:2206.11030},
-  year={2022}
+  journal={Neurocomputing},
+  volume={573},
+  pages={127175},
+  year={2024},
+  publisher={Elsevier}
 }
 ```

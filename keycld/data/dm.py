@@ -6,6 +6,7 @@ import copy
 from keycld import constraints
 
 
+DATA_CACHE = '/tmp/dm'
 IMAGE_SIZE = 64
 NUM_FRAMES = 50
 NUM_RUNS = 500
@@ -31,16 +32,16 @@ POSITION_KEYS = {
 }
 
 
-def generate_run(random_seed, environment, init_mode, control):
+def generate_run(random_seed, environment, init_mode, control, num_frames=NUM_FRAMES):
     from dm_control import suite
     assert environment in ['pendulum', 'cartpole', 'acrobot']
     assert init_mode in ['rest', 'random']
-    assert control in ['yes', 'no']
+    assert control in ['yes', 'underactuated', 'no']
     random_state = np.random.RandomState(random_seed)
 
     env = suite.load(environment, 'swingup', task_kwargs={'random': random_state})
     spec = env.action_spec()
-    action = random_state.uniform(spec.minimum, spec.maximum, spec.shape)
+    action = random_state.uniform(-2., 2., spec.shape)
     if control == 'no' or random_state.rand() < .2:
         action = action * 0
     time_step = env.reset()
@@ -70,6 +71,7 @@ def generate_run(random_seed, environment, init_mode, control):
         velocities.append(observation['velocity'])
 
     return {
+        'index': random_seed,
         't': np.array(ticks).astype(np.float32),
         'x': np.array(frames).astype(np.float32) / 255,
         'action': np.array(action).astype(np.float32),
@@ -84,12 +86,12 @@ def generate_grid(environment, num_grid_points=16):
     assert environment in ['pendulum', 'cartpole', 'acrobot']
     env = suite.load(environment, 'swingup')
     if environment == 'pendulum':
-        qs = np.linspace(- np.pi, np.pi, num_grid_points)[np.newaxis, :]
+        qs = np.linspace(- np.pi, np.pi, num_grid_points, endpoint=False)[np.newaxis, :]
     elif environment == 'cartpole':
-        qs = np.meshgrid(np.linspace(-1, 1, num_grid_points), np.linspace(-np.pi, np.pi, num_grid_points))
+        qs = np.meshgrid(np.linspace(-1, 1, num_grid_points, endpoint=False), np.linspace(-np.pi, np.pi, num_grid_points, endpoint=False))
         qs = np.stack(qs, axis=-1)
     elif environment == 'acrobot':
-        qs = np.meshgrid(np.linspace(-np.pi, np.pi, num_grid_points), np.linspace(-np.pi, np.pi, num_grid_points))
+        qs = np.meshgrid(np.linspace(-np.pi, np.pi, num_grid_points, endpoint=False), np.linspace(-np.pi, np.pi, num_grid_points, endpoint=False))
         qs = np.stack(qs, axis=-1)
 
     images = []
@@ -107,16 +109,27 @@ def generate_grid(environment, num_grid_points=16):
     }
 
 
+def calculate_epsilon(runs):
+    mean_per_run = [np.mean(run['x'], axis=0) for run in runs]
+    mean_image = np.mean(mean_per_run, axis=0)
+    mse_total = []
+    for run in runs:
+        d = mean_image[None, ...] - run['x']
+        mse_run = (d ** 2).mean()
+        mse_total.append(mse_run)
+    epsilon = np.mean(mse_total)
+    return epsilon
+
+
 def generate_runs(environment, init_mode, control, num_runs=NUM_RUNS):
     print(f'Generating runs for environment {environment} with init mode {init_mode} and control {control}.')
     runs = [generate_run(random_seed, environment, init_mode, control) for random_seed in tqdm(range(num_runs))]
-    # runs = Parallel(n_jobs=16)(delayed(generate_run)(random_seed, environment, init_mode, control) for random_seed in range(num_runs))
     return runs
 
 
 class Data:
     def __init__(self, environment, init_mode, control, overwrite_cache=False):
-        cache_path = f'/tmp/keycld_cache_{environment}_{init_mode}_{control}.p'
+        cache_path = f'{DATA_CACHE}/{environment}_{init_mode}_{control}.p'
         if os.path.exists(cache_path) and not overwrite_cache:
             print(f'Loading {cache_path}')
             with open(cache_path, 'rb') as f:
@@ -124,8 +137,10 @@ class Data:
         else:
             runs = generate_runs(environment, init_mode, control)
             self.grid = grid = generate_grid(environment)
+            os.makedirs(DATA_CACHE, exist_ok=True)
             with open(cache_path, 'wb') as f:
                 pickle.dump((runs, grid), f)
+        self.epsilon = calculate_epsilon(runs)
         self.environment = environment
         self.dt = DT[environment]
         self.num_timesteps = NUM_FRAMES

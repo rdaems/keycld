@@ -1,7 +1,7 @@
 from functools import partial
 from itertools import permutations
 import torch
-import numpy as np
+import numpy as onp
 
 import jax
 import jax.numpy as jnp
@@ -13,7 +13,7 @@ def color_palette(n, s=0.5, offset=0.):
     s = 0.5
     r = min(s / 2, (1 - s) / 2)
 
-    alpha = jnp.linspace(0, 2 * np.pi, n, endpoint=False) + offset
+    alpha = jnp.linspace(0, 2 * onp.pi, n, endpoint=False) + offset
     alpha = alpha[:, None]
     u = jnp.ones(3) / jnp.sqrt(3)
     v = jnp.array([0., -1., 1.]) / jnp.sqrt(2)
@@ -32,7 +32,7 @@ def visualize_n_maps(x, *args, **kwargs):
 
 
 def angle_range(angles):
-    return (angles + np.pi) % (2 * np.pi) - np.pi
+    return (angles + onp.pi) % (2 * onp.pi) - onp.pi
 
 
 def get_mesh_grid(shape):
@@ -47,36 +47,38 @@ def get_mesh_grid(shape):
     return xx, yy
 
 
-def estimate_dist(s):
-    # s: score map (H x W)
-    s = s / s.sum()
-    xx, yy = get_mesh_grid(s.shape)
+def map_to_keypoints(heatmap, softmax=True):
+    if softmax:
+        heatmap = jnp.exp(heatmap)
 
-    x_mean = (s * xx).sum()
-    y_mean = (s * yy).sum()
+    xx, yy = get_mesh_grid(heatmap.shape[-3:-1])
 
-    x_var = (s * (x_mean - xx) ** 2).sum()
-    y_var = (s * (y_mean - yy) ** 2).sum()
-    xy_var = (s * (x_mean - xx) * (y_mean -yy)).sum()
+    heatmap_sum = heatmap.sum((-3, -2))
+    x = (heatmap * xx[:, :, None]).sum((-3, -2)) / heatmap_sum
+    y = (heatmap * yy[:, :, None]).sum((-3, -2)) / heatmap_sum
 
-    mean = jnp.array([x_mean, y_mean])
-    cov = jnp.array([
-        [x_var, xy_var],
-        [xy_var, y_var]
-    ])
-    return mean, cov
+    keypoints = jnp.stack([x, y], -1)
+    return keypoints, heatmap
+
+
+def generate_gaussian_maps(keypoints, shape, sigma=0.1):
+    # keypoints: B x K x 2
+    # shape: H x W
+    xx, yy = get_mesh_grid(shape)
+    m = jnp.exp(- 0.5 * ((xx[None, :, :, None] - keypoints[:, None, None, :, 0]) ** 2 + (yy[None, :, :, None] - keypoints[:, None, None, :, 1]) ** 2) / sigma ** 2)
+    return m
 
 
 def numpy_collate(batch):
-    if isinstance(batch[0], np.ndarray):
-        return np.stack(batch)
+    if isinstance(batch[0], onp.ndarray):
+        return onp.stack(batch)
     elif isinstance(batch[0], (tuple,list)):
         transposed = zip(*batch)
         return [numpy_collate(samples) for samples in transposed]
     elif isinstance(batch[0], dict):
         return {key: numpy_collate([sample[key] for sample in batch]) for key in batch[0]}
     else:
-        return np.array(batch)
+        return onp.array(batch)
 
 
 class NumpyLoader(torch.utils.data.DataLoader):
@@ -288,3 +290,65 @@ def finite_difference(x, dt, mode='central', order=1):
     elif mode == 'central':
         x_t = (x[2:] - x[:-2]) / (2 * dt)
         return x[1:-1], x_t
+
+
+def calculate_vpt(epsilon, runs, predictions):
+    vpts = []
+    for run, prediction in zip(runs, predictions):
+        mse = onp.mean((run['x'] - prediction['x_recon']) ** 2, axis=(1, 2, 3))
+        for vpt, error in enumerate(mse):
+            if error > epsilon:
+                break
+        vpts.append(vpt)
+    vpt_mean, vpt_std, vpt_median = onp.mean(vpts), onp.std(vpts), onp.median(vpts)
+    return vpt_mean, vpt_std, vpt_median
+
+
+def project_velocity(constraint_fn, x, x_t):
+    if constraint_fn:
+        DPhi = jax.jacobian(constraint_fn)(x)
+        # return (jnp.eye(len(x)) - DPhi.T @ jnp.linalg.inv(DPhi @ DPhi.T) @ DPhi) @ x_t  # "D. Bertsekas, Nonlinear Programming, 1999"
+        return x_t - jnp.linalg.pinv(DPhi) @ DPhi @ x_t  # simpler
+    else:
+        return x_t
+
+
+def get_augmentations(random_key):
+    random_keys = jax.random.split(random_key, 2)
+    rotation = jax.random.choice(random_keys[0], 4).astype(int)
+    flip = jax.random.choice(random_keys[1], 2)
+
+    def augment(x):
+        x = jnp.rot90(x, rotation, axes=(-3, -2))
+        if flip:
+            x = x[..., ::-1, :]
+        return x
+
+    def unaugment(x):
+        if flip:
+            x = x[..., ::-1, :]
+        x = jnp.rot90(x, - rotation, axes=(-3, -2))
+        return x
+
+    return augment, unaugment
+
+
+def rot90_traceable(m, k=1, axes=(0, 1)):
+    k %= 4
+    return jax.lax.switch(k, [partial(jnp.rot90, m, k=i, axes=axes) for i in range(4)])
+
+
+def augment(permutation, x):
+    rotation = permutation % 4
+    flip = permutation // 4
+    x = rot90_traceable(x, rotation, axes=(-3, -2))
+    x = jnp.where(flip, x[..., ::-1, :], x)
+    return x
+
+
+def unaugment(permutation, x):
+    rotation = permutation % 4
+    flip = permutation // 4
+    x = jnp.where(flip, x[..., ::-1, :], x)
+    x = rot90_traceable(x, - rotation, axes=(-3, -2))
+    return x

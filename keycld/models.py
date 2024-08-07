@@ -3,15 +3,12 @@ from types import SimpleNamespace
 import jax
 from jax.experimental.ode import odeint
 import jax.numpy as jnp
-import numpy as onp
 import flax.linen as nn
-from jax.nn.initializers import variance_scaling, normal
-from jax.scipy.optimize import minimize
+from jax.nn.initializers import normal
 
-from keycld.util import construct_mass_matrix, explicit_euler, get_mesh_grid
+from keycld import util
+from keycld.util import construct_mass_matrix, finite_difference, project_velocity, generate_gaussian_maps
 
-
-# kernel_init = variance_scaling(0.01, 'fan_in', 'truncated_normal')
 kernel_init = normal(0.01)
 
 
@@ -60,7 +57,7 @@ class MassMatrix(nn.Module):
             x = nn.Dense(num_l_elements, kernel_init=kernel_init)(x)
         on_diagonal = x[..., :num_dof]
         off_diagonal = x[..., num_dof:]
-        on_diagonal = nn.softplus(on_diagonal)
+        on_diagonal = on_diagonal ** 2
 
         mass_matrix = construct_mass_matrix(on_diagonal, off_diagonal)
         return mass_matrix
@@ -73,7 +70,8 @@ class MassMatrixPointMasses(nn.Module):
         num_dof = len(x)
         num_keypoints = num_dof // 2
         assert 2 * num_keypoints == num_dof
-        point_masses = self.param('point_masses', normal(), (num_keypoints,))
+        # point_masses = self.param('point_masses', normal(), (num_keypoints,))
+        point_masses = self.param('point_masses', lambda _, shape: jnp.ones(shape), (num_keypoints,))
         diagonal = point_masses.repeat(2)
         diagonal = diagonal ** 2
         mass_matrix = jnp.diag(diagonal)
@@ -118,24 +116,7 @@ class Encoder(nn.Module):
         x5 = Block(self.num_hidden_dim)(jnp.concatenate([up4, x1], axis=-1))
 
         x = nn.Conv(self.num_keypoints, (3, 3))(x5)
-        h_map = jnp.exp(x) # softmax
-
-        xx, yy = get_mesh_grid(h_map.shape[-3:-1])
-
-        h_map_sum = h_map.sum((-3, -2))
-        x = (h_map * xx[:, :, None]).sum((-3, -2)) / h_map_sum
-        y = (h_map * yy[:, :, None]).sum((-3, -2)) / h_map_sum
-
-        keypoints = jnp.stack([x, y], -1)
-        return keypoints, h_map
-
-
-def generate_gaussian_maps(keypoints, shape, sigma=0.1):
-    # keypoints: B x K x 2
-    # shape: H x W
-    xx, yy = get_mesh_grid(shape)
-    m = jnp.exp(- 0.5 * ((xx[None, :, :, None] - keypoints[:, None, None, :, 0]) ** 2 + (yy[None, :, :, None] - keypoints[:, None, None, :, 1]) ** 2) / sigma ** 2)
-    return m
+        return x
 
 
 class Renderer(nn.Module):
@@ -178,6 +159,7 @@ class KeyCLD:
 
         self._encoder = Encoder(self.num_keypoints, self.num_hidden_dim)
         self._renderer = Renderer(self.num_hidden_dim, self.image_size)
+        # self._mass_matrix = MassMatrix(self.num_hidden_dim, False) if self.constraint_fn is None else MassMatrixPointMasses()
         self._mass_matrix = MassMatrixPointMasses()
         self._potential_energy = PotentialEnergy(self.num_hidden_dim)
         self._input_matrix = InputMatrix(self.num_action_dim, self.num_hidden_dim)
@@ -210,11 +192,10 @@ class KeyCLD:
         return model
 
     def encoder(self, params, *args):
-        keypoints, keypoint_maps = self._encoder.apply(params['encoder'], *args)
-        return keypoints, keypoint_maps
+        return self._encoder.apply(params['encoder'], *args)
 
-    def renderer(self, params, keypoints):
-        return self._renderer.apply(params['renderer'], keypoints)
+    def renderer(self, params, *args):
+        return self._renderer.apply(params['renderer'], *args)
 
     def mass_matrix(self, params, *args):
         return self._mass_matrix.apply(params['mass_matrix'], *args)
@@ -247,58 +228,43 @@ class KeyCLD:
         return jnp.concatenate([x_t, x_tt])
 
 
-def predict(ode, t, keypoints, action, solver='explicit_euler'):
+def predict(model, params, t, keypoints, action, solver=odeint):
     # keypoints: 2 x K x 2
     assert keypoints.ndim == 3
-    assert keypoints.shape[0] == 2
+    assert keypoints.shape[0] == 3
     assert keypoints.shape[2] == 2
-    if solver == 'explicit_euler':
-        ode_solver = explicit_euler
-    elif solver == 'dopri':
-        ode_solver = odeint
+
     num_timesteps = len(t)
     if num_timesteps <= 2:
         return keypoints
     num_keypoints = keypoints.shape[1]
-    x_dot = (keypoints[1] - keypoints[0]) / (t[1] - t[0])
-    state = jnp.concatenate([keypoints[1].flatten(), x_dot.flatten()])
-    history = ode_solver(ode, state, t[1:], action)
-    keypoints_pred, _ = history.split(2, -1)
-    keypoints_pred = keypoints_pred.reshape((num_timesteps - 1, num_keypoints, 2))
+    x = keypoints.reshape(3, num_keypoints * 2)
+    x, x_t = finite_difference(x, dt=t[1] - t[0])
+    x, x_t = x[0], x_t[0]
+    x_t = project_velocity(model.constraint_fn, x, x_t)
+    state = jnp.concatenate([x, x_t])
+    history = solver(partial(model.ode, params), state, t[1:], action)
+    x_pred, _ = jnp.split(history, 2, -1)
+    keypoints_pred = x_pred.reshape((num_timesteps - 1, num_keypoints, 2))
     keypoints_pred = jnp.concatenate([keypoints[0][None], keypoints_pred])
     return keypoints_pred
 
 
-def predict_constraint(constraint_fn, ode, t, keypoints, action, solver='explicit_euler'):
-    if constraint_fn is None:
-        return predict(ode, t, keypoints, action, solver)
-    # https://stackoverflow.com/questions/23578596/solve-an-implicit-ode-differential-algebraic-equation-dae/23580269#23580269
+@partial(jax.jit, static_argnums=(0, 3))
+def predict_run(model, params, run, solver=odeint):
+    t = run['t']
+    x = run['x']
+    action = run['action']
 
-    # keypoints: 2 x K x 2
-    assert keypoints.ndim == 3
-    assert keypoints.shape[0] == 2
-    assert keypoints.shape[2] == 2
-    if solver == 'explicit_euler':
-        ode_solver = explicit_euler
-    elif solver == 'dopri':
-        ode_solver = odeint
-    num_timesteps = len(t)
-    if num_timesteps <= 2:
-        return keypoints
-    num_keypoints = keypoints.shape[1]
-    x_dot = (keypoints[1] - keypoints[0]) / (t[1] - t[0])
-    state = jnp.concatenate([keypoints[1].flatten(), x_dot.flatten()])
+    keypoint_maps = model.encoder(params, x)
+    keypoints, keypoint_maps = util.map_to_keypoints(keypoint_maps)
+    keypoints_pred = predict(model, params, t, keypoints[:3], action, solver=solver)
+    x_recon, gaussian_maps = model.renderer(params, keypoints_pred)
 
-    constraint_value = constraint_fn(keypoints[1].flatten())
-    constraint_fn_zero = lambda x: ((constraint_fn(x) - constraint_value) ** 2).sum()
-    def ode_constraint(state, t, action):
-        x, x_t = jnp.split(state, 2)
-        result = minimize(constraint_fn_zero, x, method='bfgs')
-        state = jnp.concatenate([result.x, x_t])
-        return ode(state, t, action)
-
-    history = ode_solver(ode_constraint, state, t[1:], action)
-    keypoints_pred, _ = history.split(2, -1)
-    keypoints_pred = keypoints_pred.reshape((num_timesteps - 1, num_keypoints, 2))
-    keypoints_pred = jnp.concatenate([keypoints[0][None], keypoints_pred])
-    return keypoints_pred
+    return {
+        'keypoint_maps': keypoint_maps,
+        'keypoints': keypoints,
+        'keypoints_pred': keypoints_pred,
+        'gaussian_maps': gaussian_maps,
+        'x_recon': x_recon,
+    }
